@@ -59,15 +59,13 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen bg-[#090b0d] text-[#f3f0e8]">
-      <div className="flex min-h-screen">
-        <div className="hidden lg:block">
-          <Sidebar />
-        </div>
-
-        <main className="min-w-0 flex-1">
-          {children}
-        </main>
+      <div className="fixed inset-y-0 left-0 z-40 hidden h-screen w-64 overflow-y-auto lg:block">
+        <Sidebar />
       </div>
+
+      <main className="min-h-screen min-w-0 lg:ml-64">
+        {children}
+      </main>
     </div>
   );
 }
