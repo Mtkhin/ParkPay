@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { generateTicketId } from "../../lib/parking/ticket";
+
+import {
+  calculateTicketExit,
+  createParkingTicket,
+  generateTicketId,
+  validateTicket,
+} from "../../lib/parking/ticket";
 
 describe("generateTicketId", () => {
   it("generates the first ticket ID for the day", () => {
@@ -37,13 +43,14 @@ describe("generateTicketId", () => {
   });
 
   it("does not return an empty ticket ID", () => {
-    const ticketId = generateTicketId([], new Date("2026-09-11"));
+    const ticketId = generateTicketId(
+      [],
+      new Date("2026-09-11T10:00:00")
+    );
 
     expect(ticketId).not.toBe("");
   });
 });
-
-import { createParkingTicket } from "../../lib/parking/ticket";
 
 describe("createParkingTicket", () => {
   it("creates a new ACTIVE parking ticket", () => {
@@ -114,5 +121,129 @@ describe("createParkingTicket", () => {
     );
 
     expect(ticket.plateNumber).toBeUndefined();
+  });
+});
+
+describe("validateTicket", () => {
+  it("accepts a valid active unpaid ticket", () => {
+    const ticket = createParkingTicket(
+      "CAR",
+      [],
+      "1AB-1234",
+      new Date("2026-09-11T10:00:00")
+    );
+
+    const result = validateTicket(ticket);
+
+    expect(result.isValid).toBe(true);
+    expect(result.message).toBeUndefined();
+  });
+
+  it("rejects an invalid ticket", () => {
+    const result = validateTicket(undefined);
+
+    expect(result.isValid).toBe(false);
+    expect(result.message).toBe("Ticket not found");
+  });
+
+  it("rejects a ticket with a missing ticket ID", () => {
+    const ticket = createParkingTicket(
+      "CAR",
+      [],
+      undefined,
+      new Date("2026-09-11T10:00:00")
+    );
+
+    ticket.id = "";
+
+    const result = validateTicket(ticket);
+
+    expect(result.isValid).toBe(false);
+    expect(result.message).toBe("Ticket ID is required");
+  });
+
+  it("rejects an already completed ticket", () => {
+    const ticket = createParkingTicket(
+      "CAR",
+      [],
+      undefined,
+      new Date("2026-09-11T10:00:00")
+    );
+
+    ticket.status = "COMPLETED";
+
+    const result = validateTicket(ticket);
+
+    expect(result.isValid).toBe(false);
+    expect(result.message).toBe("Ticket is already completed");
+  });
+
+  it("rejects an already paid ticket", () => {
+    const ticket = createParkingTicket(
+      "CAR",
+      [],
+      undefined,
+      new Date("2026-09-11T10:00:00")
+    );
+
+    ticket.paymentStatus = "PAID";
+
+    const result = validateTicket(ticket);
+
+    expect(result.isValid).toBe(false);
+    expect(result.message).toBe("Ticket has already been paid");
+  });
+});
+describe("calculateTicketExit", () => {
+  it("calculates 140 minutes and 40 THB for a car", () => {
+    const ticket = createParkingTicket(
+      "CAR",
+      [],
+      "1AB-1234",
+      new Date("2026-09-11T10:00:00")
+    );
+
+    const result = calculateTicketExit(
+      ticket,
+      new Date("2026-09-11T12:20:00")
+    );
+
+    expect(result.durationMinutes).toBe(140);
+    expect(result.fee).toBe(40);
+  });
+
+  it("keeps the ticket ACTIVE before payment", () => {
+    const ticket = createParkingTicket(
+      "CAR",
+      [],
+      undefined,
+      new Date("2026-09-11T10:00:00")
+    );
+
+    calculateTicketExit(
+      ticket,
+      new Date("2026-09-11T11:00:00")
+    );
+
+    expect(ticket.status).toBe("ACTIVE");
+    expect(ticket.paymentStatus).toBe("PENDING");
+  });
+
+  it("rejects an already completed ticket", () => {
+    const ticket = createParkingTicket(
+      "CAR",
+      [],
+      undefined,
+      new Date("2026-09-11T10:00:00")
+    );
+
+    ticket.status = "COMPLETED";
+
+    expect(() =>
+      calculateTicketExit(
+        ticket,
+        new Date("2026-09-11T11:00:00")
+      )
+    ).toThrow("Ticket is already completed");
   });
 });
