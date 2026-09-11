@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowUpRight,
   Bike,
@@ -13,6 +16,14 @@ import {
 } from "lucide-react";
 
 import StatCard from "@/components/dashboard/StatCard";
+
+import type { ParkingTicket } from "@/lib/parking/ticket";
+import type { VehicleType } from "@/lib/parking/vehicleTypes";
+
+import {
+  getFromStorage,
+  STORAGE_KEYS,
+} from "@/lib/storage/localStorage";
 
 const quickActions = [
   {
@@ -45,64 +56,138 @@ const quickActions = [
   },
 ];
 
-const vehicleBreakdown = [
-  {
-    label: "Car",
-    count: 72,
-    percentage: 56,
-  },
-  {
-    label: "Motorcycle",
-    count: 41,
-    percentage: 32,
-  },
-  {
-    label: "Bicycle",
-    count: 15,
-    percentage: 12,
-  },
-];
+function isToday(dateString: string) {
+  const date = new Date(dateString);
+  const today = new Date();
 
-const recentActivity = [
-  {
-    ticket: "PP-20260911-128",
-    vehicle: "Car",
-    plate: "1AB-4821",
-    action: "Entered",
-    time: "3:42 PM",
-    status: "ACTIVE",
-    icon: CarFront,
-  },
-  {
-    ticket: "PP-20260911-127",
-    vehicle: "Motorcycle",
-    plate: "8กข-214",
-    action: "Payment completed",
-    time: "3:36 PM",
-    status: "PAID",
-    icon: Motorbike,
-  },
-  {
-    ticket: "PP-20260911-126",
-    vehicle: "Car",
-    plate: "4กท-8820",
-    action: "Vehicle exited",
-    time: "3:28 PM",
-    status: "COMPLETED",
-    icon: CarFront,
-  },
-  {
-    ticket: "PP-20260911-125",
-    vehicle: "Bicycle",
-    plate: "No plate",
-    action: "Entered",
-    time: "3:17 PM",
-    status: "ACTIVE",
-    icon: Bike,
-  },
-];
+  return date.toDateString() === today.toDateString();
+}
+
+function formatTime(dateString: string) {
+  return new Date(dateString).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatVehicleName(vehicleType: VehicleType) {
+  return (
+    vehicleType.charAt(0) +
+    vehicleType.slice(1).toLowerCase()
+  );
+}
+
+function getVehicleIcon(vehicleType: VehicleType) {
+  if (vehicleType === "BICYCLE") {
+    return Bike;
+  }
+
+  if (vehicleType === "MOTORCYCLE") {
+    return Motorbike;
+  }
+
+  return CarFront;
+}
 
 export default function DashboardPage() {
+  const [tickets, setTickets] = useState<ParkingTicket[]>([]);
+
+  useEffect(() => {
+    const storedTickets = getFromStorage<ParkingTicket[]>(
+      STORAGE_KEYS.TICKETS,
+      []
+    );
+
+    setTickets(storedTickets);
+  }, []);
+
+  const dashboardData = useMemo(() => {
+    const todaysTickets = tickets.filter((ticket) =>
+      isToday(ticket.createdAt)
+    );
+
+    const currentlyParked = tickets.filter(
+      (ticket) => ticket.status === "ACTIVE"
+    );
+
+    const completedToday = todaysTickets.filter(
+      (ticket) => ticket.status === "COMPLETED"
+    );
+
+    const revenueToday = completedToday.reduce(
+      (total, ticket) => total + (ticket.fee ?? 0),
+      0
+    );
+
+    const carCount = todaysTickets.filter(
+      (ticket) => ticket.vehicleType === "CAR"
+    ).length;
+
+    const motorcycleCount = todaysTickets.filter(
+      (ticket) => ticket.vehicleType === "MOTORCYCLE"
+    ).length;
+
+    const bicycleCount = todaysTickets.filter(
+      (ticket) => ticket.vehicleType === "BICYCLE"
+    ).length;
+
+    const totalToday = todaysTickets.length;
+
+    const vehicleBreakdown = [
+      {
+        label: "Car",
+        count: carCount,
+        percentage:
+          totalToday === 0
+            ? 0
+            : Math.round((carCount / totalToday) * 100),
+      },
+      {
+        label: "Motorcycle",
+        count: motorcycleCount,
+        percentage:
+          totalToday === 0
+            ? 0
+            : Math.round(
+                (motorcycleCount / totalToday) * 100
+              ),
+      },
+      {
+        label: "Bicycle",
+        count: bicycleCount,
+        percentage:
+          totalToday === 0
+            ? 0
+            : Math.round(
+                (bicycleCount / totalToday) * 100
+              ),
+      },
+    ];
+
+    const recentActivity = [...tickets]
+      .sort((a, b) => {
+        const aTime = new Date(
+          a.exitTime ?? a.createdAt
+        ).getTime();
+
+        const bTime = new Date(
+          b.exitTime ?? b.createdAt
+        ).getTime();
+
+        return bTime - aTime;
+      })
+      .slice(0, 4);
+
+    return {
+      totalToday,
+      currentlyParked: currentlyParked.length,
+      completedToday: completedToday.length,
+      revenueToday,
+      vehicleBreakdown,
+      recentActivity,
+    };
+  }, [tickets]);
+
   return (
     <div className="min-h-screen bg-[#090b0d]">
       <header className="border-b border-white/8 px-8 py-7 lg:px-10">
@@ -117,8 +202,8 @@ export default function DashboardPage() {
             </h1>
 
             <p className="mt-2 max-w-xl text-sm leading-6 text-white/40">
-              Monitor parking activity, payments, and daily operations
-              from one place.
+              Monitor parking activity, payments, and daily
+              operations from one place.
             </p>
           </div>
 
@@ -152,28 +237,28 @@ export default function DashboardPage() {
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               label="Vehicles Today"
-              value={128}
+              value={dashboardData.totalToday}
               detail="All vehicle entries recorded today"
               icon={CarFront}
             />
 
             <StatCard
               label="Currently Parked"
-              value={34}
+              value={dashboardData.currentlyParked}
               detail="Vehicles currently inside"
               icon={CircleParking}
             />
 
             <StatCard
               label="Completed"
-              value={94}
+              value={dashboardData.completedToday}
               detail="Parking sessions completed today"
               icon={CircleCheck}
             />
 
             <StatCard
               label="Revenue"
-              value="฿2,450"
+              value={`฿${dashboardData.revenueToday}`}
               detail="Total parking revenue today"
               icon={Coins}
             />
@@ -266,39 +351,41 @@ export default function DashboardPage() {
               </div>
 
               <div className="divide-y divide-white/6">
-                {vehicleBreakdown.map((vehicle) => (
-                  <div
-                    key={vehicle.label}
-                    className="grid gap-4 px-6 py-5 md:grid-cols-[130px_1fr_60px]"
-                  >
-                    <div>
-                      <p className="text-sm text-white/65">
-                        {vehicle.label}
-                      </p>
+                {dashboardData.vehicleBreakdown.map(
+                  (vehicle) => (
+                    <div
+                      key={vehicle.label}
+                      className="grid gap-4 px-6 py-5 md:grid-cols-[130px_1fr_60px]"
+                    >
+                      <div>
+                        <p className="text-sm text-white/65">
+                          {vehicle.label}
+                        </p>
 
-                      <p className="mt-1 text-xs text-white/25">
-                        {vehicle.count} vehicles
-                      </p>
-                    </div>
+                        <p className="mt-1 text-xs text-white/25">
+                          {vehicle.count} vehicles
+                        </p>
+                      </div>
 
-                    <div className="flex items-center">
-                      <div className="h-[3px] w-full overflow-hidden bg-white/6">
-                        <div
-                          className="h-full bg-[#9bc7d5]"
-                          style={{
-                            width: `${vehicle.percentage}%`,
-                          }}
-                        />
+                      <div className="flex items-center">
+                        <div className="h-[3px] w-full overflow-hidden bg-white/6">
+                          <div
+                            className="h-full bg-[#9bc7d5]"
+                            style={{
+                              width: `${vehicle.percentage}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="font-serif text-lg text-white/65">
+                          {vehicle.percentage}%
+                        </span>
                       </div>
                     </div>
-
-                    <div className="text-right">
-                      <span className="font-serif text-lg text-white/65">
-                        {vehicle.percentage}%
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </div>
 
@@ -309,7 +396,7 @@ export default function DashboardPage() {
                 </p>
 
                 <p className="mt-5 font-serif text-5xl tracking-tight text-[#f3f0e8]">
-                  128
+                  {dashboardData.totalToday}
                 </p>
 
                 <p className="mt-2 text-sm text-white/35">
@@ -319,8 +406,8 @@ export default function DashboardPage() {
 
               <div className="mt-10 border-t border-white/8 pt-5">
                 <p className="text-xs leading-5 text-white/30">
-                  Cars represent the largest share of today&apos;s parking
-                  activity.
+                  Vehicle distribution is calculated from
+                  today&apos;s recorded parking sessions.
                 </p>
               </div>
             </div>
@@ -345,6 +432,7 @@ export default function DashboardPage() {
                 className="group hidden items-center gap-2 text-xs text-white/35 transition hover:text-white/70 sm:flex"
               >
                 View all history
+
                 <ArrowUpRight
                   size={13}
                   strokeWidth={1.6}
@@ -353,70 +441,101 @@ export default function DashboardPage() {
               </Link>
             </div>
 
-            <div className="divide-y divide-white/6">
-              {recentActivity.map((activity) => {
-                const Icon = activity.icon;
+            {dashboardData.recentActivity.length === 0 ? (
+              <div className="px-6 py-14 text-center">
+                <p className="font-serif text-lg text-white/45">
+                  No parking activity yet
+                </p>
 
-                return (
-                  <div
-                    key={activity.ticket}
-                    className="grid gap-4 px-6 py-4 transition hover:bg-white/[0.015] md:grid-cols-[44px_1.4fr_1fr_1fr_auto]"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/8 bg-white/[0.02] text-white/35">
-                      <Icon size={16} strokeWidth={1.6} />
-                    </div>
+                <p className="mt-2 text-xs text-white/25">
+                  Register a vehicle to begin recording
+                  activity.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/6">
+                {dashboardData.recentActivity.map(
+                  (activity) => {
+                    const Icon = getVehicleIcon(
+                      activity.vehicleType
+                    );
 
-                    <div>
-                      <p className="font-mono text-xs text-white/60">
-                        {activity.ticket}
-                      </p>
+                    const isCompleted =
+                      activity.status === "COMPLETED";
 
-                      <p className="mt-1 text-xs text-white/25">
-                        {activity.vehicle}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div>
-                        <p className="text-sm text-white/55">
-                          {activity.plate}
-                        </p>
-
-                        <p className="mt-1 text-xs text-white/25">
-                          Plate
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <div>
-                        <p className="text-sm text-white/55">
-                          {activity.action}
-                        </p>
-
-                        <p className="mt-1 text-xs text-white/25">
-                          {activity.time}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center md:justify-end">
-                      <span
-                        className={`rounded-full border px-2.5 py-1 text-[10px] font-medium tracking-[0.08em] ${
-                          activity.status === "ACTIVE"
-                            ? "border-[#9bc7d5]/20 bg-[#9bc7d5]/5 text-[#9bc7d5]"
-                            : activity.status === "PAID"
-                              ? "border-white/12 bg-white/[0.03] text-white/50"
-                              : "border-white/8 text-white/30"
-                        }`}
+                    return (
+                      <div
+                        key={activity.id}
+                        className="grid gap-4 px-6 py-4 transition hover:bg-white/[0.015] md:grid-cols-[44px_1.4fr_1fr_1fr_auto]"
                       >
-                        {activity.status}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/8 bg-white/[0.02] text-white/35">
+                          <Icon
+                            size={16}
+                            strokeWidth={1.6}
+                          />
+                        </div>
+
+                        <div>
+                          <p className="font-mono text-xs text-white/60">
+                            {activity.id}
+                          </p>
+
+                          <p className="mt-1 text-xs text-white/25">
+                            {formatVehicleName(
+                              activity.vehicleType
+                            )}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center">
+                          <div>
+                            <p className="text-sm text-white/55">
+                              {activity.plateNumber ??
+                                "No plate"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-white/25">
+                              Plate
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center">
+                          <div>
+                            <p className="text-sm text-white/55">
+                              {isCompleted
+                                ? "Payment completed"
+                                : "Vehicle entered"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-white/25">
+                              {formatTime(
+                                activity.exitTime ??
+                                  activity.createdAt
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center md:justify-end">
+                          <span
+                            className={`rounded-full border px-2.5 py-1 text-[10px] font-medium tracking-[0.08em] ${
+                              isCompleted
+                                ? "border-white/10 bg-white/[0.025] text-white/40"
+                                : "border-[#9bc7d5]/20 bg-[#9bc7d5]/5 text-[#9bc7d5]"
+                            }`}
+                          >
+                            {isCompleted
+                              ? "COMPLETED"
+                              : "ACTIVE"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            )}
           </div>
         </section>
       </main>
