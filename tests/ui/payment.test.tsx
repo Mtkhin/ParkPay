@@ -185,4 +185,76 @@ describe("Payment page", () => {
       )
     ).toBeInTheDocument();
   });
+
+  it("rejects an already completed ticket", async () => {
+    const ticket = createParkingTicket(
+      "CAR",
+      [],
+      "1AB-1234",
+      new Date(Date.now() - 120 * 60 * 1000)
+    );
+
+    ticket.status = "COMPLETED";
+
+    saveToStorage(
+      STORAGE_KEYS.TICKETS,
+      [ticket]
+    );
+
+    window.history.pushState(
+      {},
+      "",
+      `/payment?ticket=${ticket.id}`
+    );
+
+    render(<PaymentPage />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Unable to open payment",
+      })
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
+        "This ticket has already been completed."
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("rejects an already paid ticket", async () => {
+    const ticket = createParkingTicket(
+      "MOTORCYCLE",
+      [],
+      "8AB-221",
+      new Date(Date.now() - 90 * 60 * 1000)
+    );
+
+    ticket.paymentStatus = "PAID";
+
+    saveToStorage(
+      STORAGE_KEYS.TICKETS,
+      [ticket]
+    );
+
+    window.history.pushState(
+      {},
+      "",
+      `/payment?ticket=${ticket.id}`
+    );
+
+    render(<PaymentPage />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "Unable to open payment",
+      })
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
+        "This ticket has already been paid."
+      )
+    ).toBeInTheDocument();
+  });
 });
