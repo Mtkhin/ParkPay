@@ -98,7 +98,13 @@ export default function DashboardPage() {
       []
     );
 
-    setTickets(storedTickets);
+    const timeoutId = window.setTimeout(() => {
+      setTickets(storedTickets);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, []);
 
   const dashboardData = useMemo(() => {

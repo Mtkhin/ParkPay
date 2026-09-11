@@ -2,7 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import {
+  usePathname,
+  useRouter,
+} from "next/navigation";
 
 import MobileNav from "./MobileNav";
 import Sidebar from "./Sidebar";
@@ -21,13 +24,19 @@ export default function AppShell({
 }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+
   const [authChecked, setAuthChecked] =
     useState(false);
 
   useEffect(() => {
     if (pathname === "/login") {
-      setAuthChecked(true);
-      return;
+      const timeoutId = window.setTimeout(() => {
+        setAuthChecked(true);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
     }
 
     const isLoggedIn =
@@ -41,7 +50,13 @@ export default function AppShell({
       return;
     }
 
-    setAuthChecked(true);
+    const timeoutId = window.setTimeout(() => {
+      setAuthChecked(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [pathname, router]);
 
   if (pathname === "/login") {

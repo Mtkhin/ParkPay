@@ -1,18 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 
 import Sidebar from "./Sidebar";
 
 export default function MobileNav() {
-  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    setIsOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     document.body.style.overflow = isOpen
@@ -23,6 +17,16 @@ export default function MobileNav() {
       document.body.style.overflow = "";
     };
   }, [isOpen]);
+
+  function handleNavigationClick(
+    event: React.MouseEvent<HTMLDivElement>
+  ) {
+    const target = event.target as HTMLElement;
+
+    if (target.closest("a")) {
+      setIsOpen(false);
+    }
+  }
 
   return (
     <>
@@ -56,7 +60,10 @@ export default function MobileNav() {
             className="absolute inset-0 bg-black/70"
           />
 
-          <div className="absolute inset-y-0 left-0 w-64 shadow-2xl">
+          <div
+            className="absolute inset-y-0 left-0 w-64 shadow-2xl"
+            onClick={handleNavigationClick}
+          >
             <Sidebar />
 
             <button

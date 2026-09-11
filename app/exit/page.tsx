@@ -1,5 +1,7 @@
 "use client";
 
+import { createElement } from "react";
+
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import {
@@ -97,7 +99,13 @@ export default function VehicleExitPage() {
     const ticketFromUrl = params.get("ticket");
 
     if (ticketFromUrl) {
-      setTicketId(ticketFromUrl);
+      const timeoutId = window.setTimeout(() => {
+        setTicketId(ticketFromUrl);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
     }
   }, []);
 
@@ -155,10 +163,6 @@ export default function VehicleExitPage() {
     event.preventDefault();
     findTicket(ticketId);
   }
-
-  const VehicleIcon = foundTicket
-    ? getVehicleIcon(foundTicket.ticket.vehicleType)
-    : CarFront;
 
   const rates = foundTicket
     ? PARKING_RATES[foundTicket.ticket.vehicleType]
@@ -312,10 +316,18 @@ export default function VehicleExitPage() {
                   <div className="flex flex-col gap-5 border-b border-white/8 pb-6 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-4">
                       <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.02] text-white/45">
-                        <VehicleIcon
-                          size={19}
-                          strokeWidth={1.6}
-                        />
+                        {(() => {
+                          const icon = foundTicket
+                            ? getVehicleIcon(
+                                foundTicket.ticket.vehicleType
+                              )
+                            : CarFront;
+
+                          return createElement(icon, {
+                            size: 19,
+                            strokeWidth: 1.6,
+                          });
+                        })()}
                       </div>
 
                       <div>

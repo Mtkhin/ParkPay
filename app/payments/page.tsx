@@ -83,7 +83,13 @@ export default function PaymentHistoryPage() {
         []
       );
 
-    setPayments(storedPayments);
+    const timeoutId = window.setTimeout(() => {
+      setPayments(storedPayments);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, []);
 
   const filteredPayments = useMemo(() => {

@@ -70,11 +70,17 @@ export default function ActiveParkingPage() {
       []
     );
 
-    setTickets(
-      storedTickets.filter(
-        (ticket) => ticket.status === "ACTIVE"
-      )
-    );
+    const timeoutId = window.setTimeout(() => {
+      setTickets(
+        storedTickets.filter(
+          (ticket) => ticket.status === "ACTIVE"
+        )
+      );
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, []);
 
   useEffect(() => {

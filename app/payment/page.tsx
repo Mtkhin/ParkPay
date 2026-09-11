@@ -111,9 +111,14 @@ export default function PaymentPage() {
     const ticketId = params.get("ticket");
 
     if (!ticketId) {
-      setError("No ticket was selected for payment.");
-      setLoading(false);
-      return;
+      const timeoutId = window.setTimeout(() => {
+        setError("No ticket was selected for payment.");
+        setLoading(false);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
     }
 
     const tickets = getFromStorage<ParkingTicket[]>(
@@ -128,25 +133,46 @@ export default function PaymentPage() {
     );
 
     if (!foundTicket) {
-      setError("Ticket not found.");
-      setLoading(false);
-      return;
+      const timeoutId = window.setTimeout(() => {
+        setError("Ticket not found.");
+        setLoading(false);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
     }
 
     if (foundTicket.status === "COMPLETED") {
-      setError("This ticket has already been completed.");
-      setLoading(false);
-      return;
+      const timeoutId = window.setTimeout(() => {
+        setError("This ticket has already been completed.");
+        setLoading(false);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
     }
 
     if (foundTicket.paymentStatus === "PAID") {
-      setError("This ticket has already been paid.");
-      setLoading(false);
-      return;
+      const timeoutId = window.setTimeout(() => {
+        setError("This ticket has already been paid.");
+        setLoading(false);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
     }
 
-    setTicket(foundTicket);
-    setLoading(false);
+    const timeoutId = window.setTimeout(() => {
+      setTicket(foundTicket);
+      setLoading(false);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, []);
 
   function handleConfirmPayment() {

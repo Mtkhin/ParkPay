@@ -112,7 +112,13 @@ export default function ParkingHistoryPage() {
       (ticket) => ticket.status === "COMPLETED"
     );
 
-    setTickets(completedTickets);
+    const timeoutId = window.setTimeout(() => {
+      setTickets(completedTickets);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, []);
 
   const filteredTickets = useMemo(() => {
