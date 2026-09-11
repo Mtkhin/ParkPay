@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
+import MobileNav from "./MobileNav";
 import Sidebar from "./Sidebar";
 
 import {
@@ -20,7 +21,6 @@ export default function AppShell({
 }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
-
   const [authChecked, setAuthChecked] =
     useState(false);
 
@@ -30,10 +30,11 @@ export default function AppShell({
       return;
     }
 
-    const isLoggedIn = getFromStorage<boolean>(
-      STORAGE_KEYS.AUTH,
-      false
-    );
+    const isLoggedIn =
+      getFromStorage<boolean>(
+        STORAGE_KEYS.AUTH,
+        false
+      );
 
     if (!isLoggedIn) {
       router.replace("/login");
@@ -64,6 +65,8 @@ export default function AppShell({
       </div>
 
       <main className="min-h-screen min-w-0 lg:ml-64">
+        <MobileNav />
+
         {children}
       </main>
     </div>

@@ -48,13 +48,9 @@ describe("Payment History page", () => {
     );
 
     const paymentRow =
-      ticketId.closest(
-        "div.grid"
-      );
+      ticketId.closest("div.grid");
 
-    expect(paymentRow).not.toBeNull();
-
-    if (!paymentRow) {
+    if (!(paymentRow instanceof HTMLElement)) {
       throw new Error(
         "Payment row could not be found"
       );
